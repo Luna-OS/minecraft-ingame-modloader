@@ -7,6 +7,7 @@
 		"HolderReferenceAccessor",
 		"KeyMappingRegistryImplMixin",
 		"MappedRegistryAccessor",
+		"ModPackResourcesUtilMixin",
 		"OptionsAccessor"
 	],
 	"injectors": {

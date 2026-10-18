@@ -58,7 +58,8 @@ public final class RuntimeModLoader {
 
 	/**
 	 * Loads the selected jars together with the ready jars they depend on. Has to run on the render
-	 * thread while no world is loaded. Updates the status of every jar it touched.
+	 * thread while no world is loaded. Updates the status of every jar it touched. The caller has to
+	 * {@link #refreshGame() refresh the game} afterwards.
 	 *
 	 * @return the number of jars that were loaded successfully
 	 */
@@ -105,7 +106,6 @@ public final class RuntimeModLoader {
 			IngameModLoader.LOGGER.info("Loaded {} {} at runtime", jar.id(), jar.version());
 		}
 
-		if (!owners.isEmpty()) refreshGame();
 		return loaded;
 	}
 
@@ -208,8 +208,8 @@ public final class RuntimeModLoader {
 		FAILED_THIS_SESSION.put(jar.path(), jar.detail());
 	}
 
-	/** Lets the game pick up what the new mods registered: key mappings, creative tab contents, assets and translations. */
-	private static void refreshGame() {
+	/** Lets the game pick up what mods (un)registered: key mappings, creative tab contents, assets and translations. */
+	public static void refreshGame() {
 		Minecraft minecraft = Minecraft.getInstance();
 
 		try {

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.0
+
+**Deutsch**
+
+- Laufende Mods lassen sich jetzt **ohne Neustart** ausschalten: Beim Klick auf „Fertig“ werden ihre Fabric-Events, Tastenbelegungen und Ressourcen entfernt und die Ressourcen neu geladen. Wieder einschalten stellt alles wieder her.
+- Mods mit Mixins in Spielklassen werden als „teilweise aus“ angezeigt, weil Mixins bis zum nächsten Start weiterwirken.
+- Mods, die von einem anderen laufenden Mod gebraucht werden, werden erst nach einem Neustart ausgeschaltet; der Grund steht in der Liste.
+
+**English**
+
+- Running mods can now be switched off **without a restart**: clicking "Done" removes their Fabric event listeners, key mappings and resources and reloads the resources. Switching them on again restores everything.
+- Mods with mixins into game classes are shown as partially off, since mixins stay active until the next start.
+- Mods that another running mod needs are only switched off after a restart; the list shows why.
+
 ## 1.0.0
 
 First release, for Minecraft 26.3 with Fabric Loader 0.19.5+ and Fabric API.

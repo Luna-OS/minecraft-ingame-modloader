@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -21,6 +22,7 @@ import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.ModContainerImpl;
 import net.fabricmc.loader.impl.lib.classtweaker.api.ClassTweaker;
 import net.fabricmc.loader.impl.lib.classtweaker.api.ClassTweakerReader;
+import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -47,9 +49,24 @@ final class LateTransformers {
 	static Set<String> loadedMixinTargets(Path jarRoot, Collection<String> configs) throws IOException {
 		Set<String> loaded = new LinkedHashSet<>();
 
+		for (String target : mixinTargets(file -> Files.isRegularFile(jarRoot.resolve(file)) ? jarRoot.resolve(file) : null, configs)) {
+			if (LoaderInternals.isClassLoaded(target)) loaded.add(target);
+		}
+
+		return loaded;
+	}
+
+	/**
+	 * Returns the classes the mixins of the given configs target.
+	 *
+	 * @param files finds a file of the mod by its path inside the jar, or returns null if it does not exist
+	 */
+	static Set<String> mixinTargets(Function<String, @Nullable Path> files, Collection<String> configs) throws IOException {
+		Set<String> targets = new LinkedHashSet<>();
+
 		for (String configName : configs) {
-			Path configFile = jarRoot.resolve(configName);
-			if (!Files.isRegularFile(configFile)) throw new IOException("Missing mixin config " + configName);
+			Path configFile = files.apply(configName);
+			if (configFile == null) throw new IOException("Missing mixin config " + configName);
 
 			JsonObject config;
 
@@ -61,16 +78,14 @@ final class LateTransformers {
 
 			for (String mixin : mixinClasses(config)) {
 				String className = pkg.isEmpty() ? mixin : pkg + "." + mixin;
-				Path classFile = jarRoot.resolve(className.replace('.', '/') + ".class");
-				if (!Files.isRegularFile(classFile)) throw new IOException("Missing mixin class " + className);
+				Path classFile = files.apply(className.replace('.', '/') + ".class");
+				if (classFile == null) throw new IOException("Missing mixin class " + className);
 
-				for (String target : readMixinTargets(Files.readAllBytes(classFile))) {
-					if (LoaderInternals.isClassLoaded(target)) loaded.add(target);
-				}
+				targets.addAll(readMixinTargets(Files.readAllBytes(classFile)));
 			}
 		}
 
-		return loaded;
+		return targets;
 	}
 
 	private static List<String> mixinClasses(JsonObject config) {

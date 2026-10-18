@@ -19,7 +19,6 @@
 	"ingame-modloader.status.failed": "Failed to load: %s",
 	"ingame-modloader.toast.copied": "Copied %s mod(s) to the mods folder",
 	"ingame-modloader.toast.skipped": "Skipped %s file(s) (not a .jar or already exists)",
-	"ingame-modloader.toast.loaded": "Loaded %s mod(s) without restarting",
 	"ingame-modloader.toast.failed": "%s mod(s) failed – see the list and the log",
 	"ingame-modloader.screen.search": "Search...",
 	"ingame-modloader.list.disabled": "Disabled",
@@ -28,5 +27,13 @@
 	"ingame-modloader.status.disabled": "Disabled",
 	"ingame-modloader.status.disabled_pending": "Still running – off from the next start",
 	"ingame-modloader.toast.restart": "%s change(s) take effect after a restart",
-	"ingame-modloader.toast.toggle_failed": "Could not switch %s"
+	"ingame-modloader.toast.toggle_failed": "Could not switch %s",
+	"ingame-modloader.status.disabled_on_close": "Switched off when you close this screen – no restart",
+	"ingame-modloader.status.disabled_pending_because": "Still running – off from the next start, %s",
+	"ingame-modloader.status.disabled_live": "Switched off without restart",
+	"ingame-modloader.status.disabled_live_partial": "Switched off – its mixins stay active until the next start",
+	"ingame-modloader.status.reenable": "Switched back on when you close this screen",
+	"ingame-modloader.blocker.self": "because this mod manages the mods",
+	"ingame-modloader.blocker.needed_by": "because %s needs it",
+	"ingame-modloader.toast.applied": "%s mod(s) switched on, %s off – no restart"
 }

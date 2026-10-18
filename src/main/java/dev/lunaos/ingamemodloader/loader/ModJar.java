@@ -29,8 +29,12 @@ public final class ModJar {
 		FAILED,
 		/** Switched off and not running. */
 		DISABLED,
-		/** Switched off, but loaded in this session, so it only stops running after a restart. */
-		DISABLED_PENDING
+		/** Switched off while running. It is cut off from the game when the mods screen is closed, or after a restart if it cannot be. */
+		DISABLED_PENDING,
+		/** Was running and has been switched off without a restart. */
+		DISABLED_LIVE,
+		/** Was switched off without a restart and is switched on again when the mods screen is closed. */
+		REENABLE
 	}
 
 	private final Path path;
@@ -40,6 +44,7 @@ public final class ModJar {
 	private final List<String> mixinConfigs = new ArrayList<>();
 	private Status status;
 	private Component detail;
+	private boolean switchableLive;
 
 	ModJar(Path path, @Nullable LoaderModMetadata metadata, Status status, Component detail) {
 		this(path, true, metadata, status, detail);
@@ -114,6 +119,15 @@ public final class ModJar {
 
 	public boolean isLoadable() {
 		return status == Status.READY;
+	}
+
+	/** Whether a running mod that was switched off can be cut off from the game without a restart. */
+	public boolean switchableLive() {
+		return switchableLive;
+	}
+
+	void setSwitchableLive(boolean switchableLive) {
+		this.switchableLive = switchableLive;
 	}
 
 	void setStatus(Status status, Component detail) {
