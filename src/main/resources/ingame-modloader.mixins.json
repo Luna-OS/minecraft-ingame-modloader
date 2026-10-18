@@ -1,0 +1,18 @@
+{
+	"required": true,
+	"package": "dev.lunaos.ingamemodloader.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"CreativeModeTabsAccessor",
+		"HolderReferenceAccessor",
+		"KeyMappingRegistryImplMixin",
+		"MappedRegistryAccessor",
+		"OptionsAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
