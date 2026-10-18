@@ -17,7 +17,8 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 
-import dev.lunaos.ingamemodloader.gui.ModLoaderScreen;
+import dev.lunaos.ingamemodloader.gui.ModsScreen;
+import dev.lunaos.ingamemodloader.loader.ModFiles;
 
 public class IngameModLoader implements ClientModInitializer {
 	public static final String MOD_ID = "ingame-modloader";
@@ -28,6 +29,7 @@ public class IngameModLoader implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		ModFiles.applyPendingFromLastSession();
 		ScreenEvents.AFTER_INIT.register((minecraft, screen, width, height) -> {
 			if (screen instanceof TitleScreen) addTitleScreenButton(minecraft, screen);
 		});
@@ -41,7 +43,7 @@ public class IngameModLoader implements ClientModInitializer {
 		int x = options != null ? options.getX() - 24 : 4;
 		int y = options != null ? options.getY() : 4;
 
-		widgets.add(Button.builder(BUTTON_LABEL, button -> minecraft.gui.setScreen(new ModLoaderScreen(screen)))
+		widgets.add(Button.builder(BUTTON_LABEL, button -> minecraft.gui.setScreen(new ModsScreen(screen)))
 				.bounds(x, y, 20, 20)
 				.tooltip(Tooltip.create(BUTTON_TOOLTIP))
 				.build());
