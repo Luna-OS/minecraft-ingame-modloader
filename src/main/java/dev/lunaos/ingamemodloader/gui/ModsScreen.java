@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import com.google.common.hash.Hashing;
 import com.mojang.blaze3d.Blaze3D;
 import com.mojang.blaze3d.platform.NativeImage;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -50,6 +51,7 @@ import dev.lunaos.ingamemodloader.loader.ModJar;
 import dev.lunaos.ingamemodloader.loader.ModJar.Status;
 import dev.lunaos.ingamemodloader.loader.ModScanner;
 import dev.lunaos.ingamemodloader.loader.RuntimeModLoader;
+import dev.lunaos.ingamemodloader.loader.RuntimeModUnloader;
 
 /**
  * Lists the mods in the mods folder like the resource pack screen does: switched off mods on the
@@ -137,20 +139,42 @@ public class ModsScreen extends Screen {
 		}
 	}
 
-	/** Switched on mods are loaded when leaving the screen, like resource packs are applied when leaving theirs. */
+	/** Changes are applied when leaving the screen, like resource packs are applied when leaving theirs. */
 	@Override
 	public void onClose() {
 		minecraft.gui.setScreen(parent);
 
 		List<ModJar> current = ModScanner.scan();
+		int switchedOff = 0;
+		int switchedOn = 0;
+		int failed = 0;
+
+		for (ModJar jar : current) {
+			try {
+				if (jar.status() == Status.DISABLED_PENDING && jar.switchableLive()) {
+					RuntimeModUnloader.disable(FabricLoader.getInstance().getModContainer(jar.id()).orElseThrow());
+					switchedOff++;
+				} else if (jar.status() == Status.REENABLE) {
+					RuntimeModUnloader.enable(jar.id());
+					switchedOn++;
+				}
+			} catch (Exception e) {
+				IngameModLoader.LOGGER.error("Failed to switch {}", jar.id(), e);
+				failed++;
+			}
+		}
+
 		List<ModJar> ready = current.stream().filter(ModJar::isLoadable).toList();
 		int loaded = ready.isEmpty() ? 0 : RuntimeModLoader.load(ready, current);
-		long failed = ready.stream().filter(jar -> jar.status() == Status.FAILED).count();
-		long needRestart = current.stream().filter(jar -> jar.status() == Status.NEEDS_RESTART || jar.status() == Status.DISABLED_PENDING).count();
+		failed += (int) ready.stream().filter(jar -> jar.status() == Status.FAILED).count();
+		long needRestart = current.stream().filter(jar -> jar.status() == Status.NEEDS_RESTART || jar.status() == Status.DISABLED_PENDING && !jar.switchableLive()).count();
 
-		if (!ready.isEmpty()) {
-			SystemToast.add(minecraft.gui.toastManager(), TOAST, Component.translatable("ingame-modloader.toast.loaded", loaded),
+		if (switchedOff + switchedOn + loaded > 0) {
+			RuntimeModLoader.refreshGame();
+			SystemToast.add(minecraft.gui.toastManager(), TOAST, Component.translatable("ingame-modloader.toast.applied", loaded + switchedOn, switchedOff),
 					failed > 0 ? Component.translatable("ingame-modloader.toast.failed", failed) : null);
+		} else if (failed > 0) {
+			SystemToast.add(minecraft.gui.toastManager(), TOAST, Component.translatable("ingame-modloader.toast.failed", failed), null);
 		} else if (changed && needRestart > 0) {
 			SystemToast.add(minecraft.gui.toastManager(), TOAST, Component.translatable("ingame-modloader.toast.restart", needRestart), null);
 		}
@@ -280,7 +304,10 @@ public class ModsScreen extends Screen {
 			case ALREADY_LOADED -> jar.description().isEmpty()
 					? Component.translatable("ingame-modloader.status.already_loaded").withColor(0xFF808080)
 					: Component.literal(jar.description()).withColor(0xFF808080);
-			case NEEDS_RESTART, DISABLED_PENDING -> jar.detail().copy().withColor(0xFFFFAA00);
+			case DISABLED_PENDING -> jar.detail().copy().withColor(jar.switchableLive() ? 0xFFFFFF55 : 0xFFFFAA00);
+			case REENABLE -> jar.detail().copy().withColor(0xFF55FF55);
+			case DISABLED_LIVE -> jar.detail().copy().withColor(RuntimeModUnloader.isPartiallyDisabled(jar.id()) ? 0xFFFFAA00 : 0xFF808080);
+			case NEEDS_RESTART -> jar.detail().copy().withColor(0xFFFFAA00);
 			case MISSING_DEPENDENCIES, INVALID, FAILED -> jar.detail().copy().withColor(0xFFFFAAAA);
 			case DISABLED -> jar.detail().copy().withColor(0xFF808080);
 		};

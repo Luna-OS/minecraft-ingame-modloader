@@ -77,7 +77,26 @@ public final class ModScanner {
 		}
 
 		resolveDependencies(result);
+		checkLiveDisabling(result);
 		return result;
+	}
+
+	/** Decides for running mods that were switched off whether they can be cut off from the game now. */
+	private static void checkLiveDisabling(List<ModJar> jars) {
+		List<ModJar> pending = jars.stream().filter(jar -> jar.status() == Status.DISABLED_PENDING && jar.metadata() != null).toList();
+		Set<String> pendingIds = pending.stream().map(ModJar::id).collect(Collectors.toSet());
+
+		for (ModJar jar : pending) {
+			Optional<ModContainer> mod = FabricLoader.getInstance().getModContainer(jar.id());
+			Component blocker = mod.map(container -> RuntimeModUnloader.blocker(container, pendingIds)).orElse(null);
+
+			if (mod.isPresent() && blocker == null) {
+				jar.setSwitchableLive(true);
+				jar.setStatus(Status.DISABLED_PENDING, Component.translatable("ingame-modloader.status.disabled_on_close"));
+			} else if (blocker != null) {
+				jar.setStatus(Status.DISABLED_PENDING, Component.translatable("ingame-modloader.status.disabled_pending_because", blocker));
+			}
+		}
 	}
 
 	public static boolean isJar(Path path) {
@@ -110,8 +129,13 @@ public final class ModScanner {
 
 			Component failure = RuntimeModLoader.failureThisSession(path);
 
+			boolean running = loadedOrigins.contains(path) || RuntimeModLoader.wasLoadedThisSession(path);
+
 			if (failure != null) {
 				jar.setStatus(Status.FAILED, failure);
+				return jar;
+			} else if (running && RuntimeModUnloader.isDisabled(metadata.getId())) {
+				jar.setStatus(Status.REENABLE, Component.translatable("ingame-modloader.status.reenable"));
 				return jar;
 			} else if (RuntimeModLoader.wasLoadedThisSession(path)) {
 				jar.setStatus(Status.LOADED, Component.translatable("ingame-modloader.status.loaded"));
@@ -193,6 +217,11 @@ public final class ModScanner {
 		Path enabledPath = ModFiles.enabledPath(path);
 
 		if (loadedOrigins.contains(enabledPath) || RuntimeModLoader.wasLoadedThisSession(enabledPath)) {
+			if (metadata != null && RuntimeModUnloader.isDisabled(metadata.getId())) {
+				String key = RuntimeModUnloader.isPartiallyDisabled(metadata.getId()) ? "ingame-modloader.status.disabled_live_partial" : "ingame-modloader.status.disabled_live";
+				return new ModJar(path, false, metadata, Status.DISABLED_LIVE, Component.translatable(key));
+			}
+
 			return new ModJar(path, false, metadata, Status.DISABLED_PENDING, Component.translatable("ingame-modloader.status.disabled_pending"));
 		}
 
@@ -259,6 +288,8 @@ public final class ModScanner {
 			Map<String, Version> available = new HashMap<>();
 
 			for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
+				if (RuntimeModUnloader.isDisabled(mod.getMetadata().getId())) continue;
+
 				provide(available, mod.getMetadata().getId(), mod.getMetadata().getProvides(), mod.getMetadata().getVersion());
 			}
 
