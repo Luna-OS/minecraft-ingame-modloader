@@ -26,10 +26,15 @@ public final class ModJar {
 		MISSING_DEPENDENCIES,
 		INVALID,
 		/** Loading was attempted but failed. */
-		FAILED
+		FAILED,
+		/** Switched off and not running. */
+		DISABLED,
+		/** Switched off, but loaded in this session, so it only stops running after a restart. */
+		DISABLED_PENDING
 	}
 
 	private final Path path;
+	private final boolean enabled;
 	private final @Nullable LoaderModMetadata metadata;
 	private final List<ModJar> nested = new ArrayList<>();
 	private final List<String> mixinConfigs = new ArrayList<>();
@@ -37,7 +42,12 @@ public final class ModJar {
 	private Component detail;
 
 	ModJar(Path path, @Nullable LoaderModMetadata metadata, Status status, Component detail) {
+		this(path, true, metadata, status, detail);
+	}
+
+	ModJar(Path path, boolean enabled, @Nullable LoaderModMetadata metadata, Status status, Component detail) {
 		this.path = path;
+		this.enabled = enabled;
 		this.metadata = metadata;
 		this.status = status;
 		this.detail = detail;
@@ -45,6 +55,11 @@ public final class ModJar {
 
 	public Path path() {
 		return path;
+	}
+
+	/** Whether the jar is switched on, i.e. in the mods folder as a {@code .jar}. */
+	public boolean enabled() {
+		return enabled;
 	}
 
 	public @Nullable LoaderModMetadata metadata() {
@@ -66,6 +81,10 @@ public final class ModJar {
 
 	public String version() {
 		return metadata != null ? metadata.getVersion().getFriendlyString() : "";
+	}
+
+	public String description() {
+		return metadata != null ? metadata.getDescription() : "";
 	}
 
 	public String fileName() {

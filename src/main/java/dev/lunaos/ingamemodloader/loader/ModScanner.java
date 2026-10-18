@@ -62,7 +62,7 @@ public final class ModScanner {
 		List<Path> jars;
 
 		try (Stream<Path> files = Files.list(modsDir)) {
-			jars = files.filter(ModScanner::isJar).sorted().toList();
+			jars = files.filter(file -> isJar(file) || ModFiles.isDisabledJar(file)).sorted().toList();
 		} catch (IOException e) {
 			IngameModLoader.LOGGER.error("Failed to list {}", modsDir, e);
 			return result;
@@ -70,8 +70,10 @@ public final class ModScanner {
 
 		Set<Path> loadedOrigins = loadedOrigins();
 
-		for (Path jar : jars) {
-			result.add(inspect(jar.toAbsolutePath().normalize(), true, loadedOrigins));
+		for (Path file : jars) {
+			Path jar = file.toAbsolutePath().normalize();
+			boolean disabled = ModFiles.isDisabledJar(jar) || ModFiles.isPendingDisable(jar);
+			result.add(disabled ? inspectDisabled(jar, loadedOrigins) : inspect(jar, true, loadedOrigins));
 		}
 
 		resolveDependencies(result);
@@ -97,9 +99,8 @@ public final class ModScanner {
 
 			LoaderModMetadata metadata;
 
-			try (InputStream in = Files.newInputStream(modJson)) {
-				metadata = ModMetadataParser.parseMetadata(in, path.toString(), List.of(), new VersionOverrides(),
-						new DependencyOverrides(FabricLoader.getInstance().getConfigDir()), FabricLoader.getInstance().isDevelopmentEnvironment());
+			try {
+				metadata = readMetadata(modJson, path);
 			} catch (Exception e) {
 				return new ModJar(path, null, Status.INVALID, Component.translatable("ingame-modloader.status.invalid_metadata", e.getMessage()));
 			}
@@ -175,6 +176,36 @@ public final class ModScanner {
 		} catch (Exception e) {
 			IngameModLoader.LOGGER.warn("Failed to inspect {}", path, e);
 			return new ModJar(path, null, Status.INVALID, Component.translatable("ingame-modloader.status.unreadable", String.valueOf(e.getMessage())));
+		}
+	}
+
+	/** Switched off jars are only read for their name and icon, whether they could be loaded is checked once they are switched on. */
+	private static ModJar inspectDisabled(Path path, Set<Path> loadedOrigins) {
+		LoaderModMetadata metadata = null;
+
+		try (FileSystem fs = FileSystems.newFileSystem(path)) {
+			Path modJson = fs.getRootDirectories().iterator().next().resolve("fabric.mod.json");
+			if (Files.isRegularFile(modJson)) metadata = readMetadata(modJson, path);
+		} catch (Exception e) {
+			IngameModLoader.LOGGER.warn("Failed to read {}", path, e);
+		}
+
+		Path enabledPath = ModFiles.enabledPath(path);
+
+		if (loadedOrigins.contains(enabledPath) || RuntimeModLoader.wasLoadedThisSession(enabledPath)) {
+			return new ModJar(path, false, metadata, Status.DISABLED_PENDING, Component.translatable("ingame-modloader.status.disabled_pending"));
+		}
+
+		Component detail = metadata != null && !metadata.getDescription().isEmpty()
+				? Component.literal(metadata.getDescription())
+				: Component.translatable("ingame-modloader.status.disabled");
+		return new ModJar(path, false, metadata, Status.DISABLED, detail);
+	}
+
+	private static LoaderModMetadata readMetadata(Path modJson, Path jar) throws Exception {
+		try (InputStream in = Files.newInputStream(modJson)) {
+			return ModMetadataParser.parseMetadata(in, jar.toString(), List.of(), new VersionOverrides(),
+					new DependencyOverrides(FabricLoader.getInstance().getConfigDir()), FabricLoader.getInstance().isDevelopmentEnvironment());
 		}
 	}
 
