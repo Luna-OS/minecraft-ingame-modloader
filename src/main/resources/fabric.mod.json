@@ -1,0 +1,29 @@
+{
+	"schemaVersion": 1,
+	"id": "ingame-modloader",
+	"version": "${version}",
+	"name": "Ingame Modloader",
+	"description": "Add and load new Fabric mods from the title screen without restarting the game.",
+	"authors": [
+		"Luna-OS"
+	],
+	"contact": {
+		"sources": "https://github.com/Luna-OS/minecraft-ingame-modloader"
+	},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.lunaos.ingamemodloader.IngameModLoader"
+		]
+	},
+	"mixins": [
+		"ingame-modloader.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
