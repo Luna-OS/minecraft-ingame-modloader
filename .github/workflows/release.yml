@@ -1,8 +1,10 @@
-# Builds the mod and publishes a GitHub release when a version tag (e.g. v1.0.0) is pushed.
+# Builds the mod and publishes a GitHub release for the version in gradle.properties.
+# Run it from the Actions tab ("Run workflow"), or push a matching tag (e.g. v1.0.0).
 # The release notes are the section of CHANGELOG.md for that version.
 
 name: release
 on:
+  workflow_dispatch:
   push:
     tags: ['v*']
 
@@ -24,23 +26,25 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build
-        run: ./gradlew build
-      - name: check that the tag matches the mod version
+      - name: read versions
         run: |
           version=$(grep '^version=' gradle.properties | cut -d= -f2)
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "v$version" != "$GITHUB_REF_NAME" ]; then
             echo "Tag $GITHUB_REF_NAME does not match version=$version in gradle.properties"
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
           echo "MINECRAFT_VERSION=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)" >> "$GITHUB_ENV"
+      - name: build
+        run: ./gradlew build
       - name: extract release notes
         run: awk -v version="## $VERSION" '$0 == version { found = 1; next } found && /^## / { exit } found { print }' CHANGELOG.md > release-notes.md
       - name: publish release
         env:
           GH_TOKEN: ${{ github.token }}
+        # Creates the tag on the built commit if it does not exist yet.
         run: |
-          gh release create "$GITHUB_REF_NAME" "build/libs/ingame-modloader-$VERSION.jar" \
+          gh release create "v$VERSION" "build/libs/ingame-modloader-$VERSION.jar" \
+            --target "$GITHUB_SHA" \
             --title "Ingame Modloader $VERSION for Minecraft $MINECRAFT_VERSION" \
             --notes-file release-notes.md
