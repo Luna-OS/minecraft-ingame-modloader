@@ -5,6 +5,7 @@
 	"client": [
 		"CreativeModeTabsAccessor",
 		"HolderReferenceAccessor",
+		"KeyMappingRegistryImplMixin",
 		"MappedRegistryAccessor",
 		"OptionsAccessor"
 	],

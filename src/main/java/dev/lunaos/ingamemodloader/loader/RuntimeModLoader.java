@@ -38,6 +38,7 @@ public final class RuntimeModLoader {
 	private static final Set<Path> LOADED_THIS_SESSION = new HashSet<>();
 	/** Failed jars are partially registered with the loader and would otherwise show up as loaded. */
 	private static final Map<Path, Component> FAILED_THIS_SESSION = new HashMap<>();
+	private static boolean loading;
 
 	private RuntimeModLoader() {
 	}
@@ -48,6 +49,11 @@ public final class RuntimeModLoader {
 
 	public static @Nullable Component failureThisSession(Path path) {
 		return FAILED_THIS_SESSION.get(path);
+	}
+
+	/** Whether mod code of late-loaded mods is currently running. */
+	public static boolean isLoading() {
+		return loading;
 	}
 
 	/**
@@ -64,6 +70,7 @@ public final class RuntimeModLoader {
 		Map<ModContainerImpl, ModJar> owners = new LinkedHashMap<>();
 		RegistryUnfreezer registries = new RegistryUnfreezer();
 		registries.unfreeze();
+		loading = true;
 
 		try {
 			for (ModJar jar : order) {
@@ -83,6 +90,7 @@ public final class RuntimeModLoader {
 			runEntrypoints(owners, "main", ModInitializer.class, ModInitializer::onInitialize);
 			runEntrypoints(owners, "client", ClientModInitializer.class, ClientModInitializer::onInitializeClient);
 		} finally {
+			loading = false;
 			registries.refreeze();
 		}
 
